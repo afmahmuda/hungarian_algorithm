@@ -50,7 +50,7 @@ func Solve(costMatrix types.SquareMatrix) (types.SquareMatrix, error) {
 
 	step := step_1
 	newCost := *costMatrix.Clone()
-	starMatrix := *types.NewSquareMatrix(newCost.Dim())
+	maskMatrix := *types.NewSquareMatrix(newCost.Dim())
 
 	var rowCov rowCoverage
 	var colCov colCoverage
@@ -67,38 +67,39 @@ loop:
 			println(newCost.String())
 		case step_2:
 			rowCov = rowCoverage{}
-			starMatrix, colCov, step = step2(newCost)
-			println("init star matrix")
-			println(starMatrix.String())
+			maskMatrix, colCov, step = step2(newCost)
+			println("init mask matrix")
+			println(maskMatrix.String())
 			println(rowCov.String())
 			println(colCov.String())
 
 		case step_3:
-			colCov, step = step3(starMatrix)
+			colCov, step = step3(maskMatrix)
 			println(rowCov.String())
 			println("is solution found?", step == step_done)
 		case step_4:
-			starMatrix, rowCov, colCov, initial_row_smallest_value, initial_col_smallest_value, step = step4(newCost, starMatrix, rowCov, colCov)
-			println("star matrix")
-			println(starMatrix.String(), "\n")
+			maskMatrix, rowCov, colCov, initial_row_smallest_value, initial_col_smallest_value, step = step4(newCost, maskMatrix, rowCov, colCov)
+			println("mask matrix")
+			println(maskMatrix.String())
 			println(rowCov.String())
 			println(colCov.String())
 		case step_5:
-			starMatrix, rowCov, colCov, step = step5(newCost, starMatrix, rowCov, colCov, initial_row_smallest_value, initial_col_smallest_value)
-			println("star matrix")
-			println(starMatrix.String(), "\n")
+			maskMatrix, rowCov, colCov, step = step5(newCost, maskMatrix, rowCov, colCov, initial_row_smallest_value, initial_col_smallest_value)
+			println("mask matrix")
+			println(maskMatrix.String())
 			println(rowCov.String())
 			println(colCov.String())
 		case step_6:
-			newCost, step = step6(newCost, starMatrix, rowCov, colCov)
+			newCost, step = step6(newCost, maskMatrix, rowCov, colCov)
 			println("altered cost matrix")
-			println(starMatrix.String(), "\n")
+			println(maskMatrix.String())
 		default:
+			println("done")
 			break loop
 		}
 	}
 
-	return starMatrix, nil
+	return maskMatrix, nil
 }
 
 func Translate(costMatrix, solutionMatrix types.SquareMatrix) types.AssignmentMap {
@@ -169,20 +170,20 @@ func step2(costMatrix types.SquareMatrix) (types.SquareMatrix, colCoverage, step
 	return *result, colCoveredMap, step_3
 }
 
-func step3(starMatrix types.SquareMatrix) (colCoverage, step) {
+func step3(maskMatrix types.SquareMatrix) (colCoverage, step) {
 
 	colCoveredMap := colCoverage{}
 
-	for col := 0; col < starMatrix.Dim(); col++ {
-		for row := 0; row < starMatrix.Dim(); row++ {
-			if starMatrix.Get(row, col) == 1 {
+	for col := 0; col < maskMatrix.Dim(); col++ {
+		for row := 0; row < maskMatrix.Dim(); row++ {
+			if maskMatrix.Get(row, col) == 1 {
 				colCoveredMap[col] = true
 				break
 			}
 		}
 	}
 
-	if len(colCoveredMap) < starMatrix.Dim() {
+	if len(colCoveredMap) < maskMatrix.Dim() {
 		return colCoveredMap, step_4
 	}
 
@@ -193,33 +194,33 @@ type rowColPair struct {
 	row, col int
 }
 
-func step4(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage) (types.SquareMatrix, rowCoverage, colCoverage, int, int, step) {
+func step4(costMatrix, maskMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage) (types.SquareMatrix, rowCoverage, colCoverage, int, int, step) {
 
 	if len(colCoveredMap) == costMatrix.Dim() {
-		return starMatrix, nil, nil, 0, 0, step_done
+		return maskMatrix, nil, nil, 0, 0, step_done
 	}
 
 	for {
-		found, row, col := getUncoveredZero(costMatrix, starMatrix, rowCoveredMap, colCoveredMap)
+		found, row, col := getUncoveredZero(costMatrix, maskMatrix, rowCoveredMap, colCoveredMap)
 		if !found {
-			return starMatrix, rowCoveredMap, colCoveredMap, 0, 0, step_6
+			return maskMatrix, rowCoveredMap, colCoveredMap, 0, 0, step_6
 		}
 
-		starMatrix.Set(row, col, 2)
-		if isStarInRow(starMatrix, row) {
-			col = starInRow(starMatrix, row)
+		maskMatrix.Set(row, col, 2)
+		if isStarInRow(maskMatrix, row) {
+			col = starInRow(maskMatrix, row)
 			rowCoveredMap[row] = true
 			delete(colCoveredMap, col)
 			continue
 		}
 
-		return starMatrix, rowCoveredMap, colCoveredMap, row, col, step_5
+		return maskMatrix, rowCoveredMap, colCoveredMap, row, col, step_5
 
 	}
 
 }
 
-func step5(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage, initial_row_smallest_value, initial_col_smallest_value int) (types.SquareMatrix, rowCoverage, colCoverage, step) {
+func step5(costMatrix, maskMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage, initial_row_smallest_value, initial_col_smallest_value int) (types.SquareMatrix, rowCoverage, colCoverage, step) {
 	paths := []rowColPair{}
 
 	paths = append(paths, rowColPair{initial_row_smallest_value, initial_col_smallest_value})
@@ -227,30 +228,30 @@ func step5(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap rowCoverage,
 	for {
 		col := paths[len(paths)-1].col
 
-		found := isStarInCol(starMatrix, col)
+		found := isStarInCol(maskMatrix, col)
 		if found {
-			r := starInCol(starMatrix, col)
+			r := starInCol(maskMatrix, col)
 			paths = append(paths, rowColPair{r, col})
 
-			c := primeInRow(starMatrix, r)
+			c := primeInRow(maskMatrix, r)
 			paths = append(paths, rowColPair{r, c})
 			continue
 		}
 		break
 	}
 
-	starMatrix = augmentPath(starMatrix, paths)
-	starMatrix = erasePrimes(starMatrix)
+	maskMatrix = augmentPath(maskMatrix, paths)
+	maskMatrix = erasePrimes(maskMatrix)
 
-	return starMatrix, rowCoverage{}, colCoverage{}, step_3
+	return maskMatrix, rowCoverage{}, colCoverage{}, step_3
 }
 
-func step6(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage) (types.SquareMatrix, step) {
+func step6(costMatrix, maskMatrix types.SquareMatrix, rowCoveredMap rowCoverage, colCoveredMap colCoverage) (types.SquareMatrix, step) {
 	newCost := costMatrix.Clone()
 
 	minVal := findSmallest(costMatrix, rowCoveredMap, colCoveredMap)
-	for row := 0; row < starMatrix.Dim(); row++ {
-		for col := 0; col < starMatrix.Dim(); col++ {
+	for row := 0; row < maskMatrix.Dim(); row++ {
+		for col := 0; col < maskMatrix.Dim(); col++ {
 			newValue := newCost.Get(row, col)
 			if rowCoveredMap[row] {
 				newValue += minVal
@@ -265,14 +266,14 @@ func step6(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap rowCoverage,
 	return *newCost, step_4
 }
 
-func getUncoveredZero(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap, colCoveredMap map[int]bool) (bool, int, int) {
-	for row := 0; row < starMatrix.Dim(); row++ {
-		for col := 0; col < starMatrix.Dim(); col++ {
+func getUncoveredZero(costMatrix, maskMatrix types.SquareMatrix, rowCoveredMap, colCoveredMap map[int]bool) (bool, int, int) {
+	for row := 0; row < maskMatrix.Dim(); row++ {
+		for col := 0; col < maskMatrix.Dim(); col++ {
 
 			if costMatrix.Get(row, col) != 0 {
 				continue
 			}
-			if starMatrix.Get(row, col) == 1 {
+			if maskMatrix.Get(row, col) == 1 {
 				continue
 			}
 			if rowCoveredMap[row] {
@@ -287,77 +288,77 @@ func getUncoveredZero(costMatrix, starMatrix types.SquareMatrix, rowCoveredMap, 
 	return false, -1, -1
 }
 
-func isStarInRow(starMatrix types.SquareMatrix, row int) bool {
-	for col := 0; col < starMatrix.Dim(); col++ {
-		if starMatrix.Get(row, col) == 1 {
+func isStarInRow(maskMatrix types.SquareMatrix, row int) bool {
+	for col := 0; col < maskMatrix.Dim(); col++ {
+		if maskMatrix.Get(row, col) == 1 {
 			return true
 		}
 	}
 	return false
 }
 
-func starInRow(starMatrix types.SquareMatrix, row int) int {
-	for col := 0; col < starMatrix.Dim(); col++ {
-		if starMatrix.Get(row, col) == 1 {
+func starInRow(maskMatrix types.SquareMatrix, row int) int {
+	for col := 0; col < maskMatrix.Dim(); col++ {
+		if maskMatrix.Get(row, col) == 1 {
 			return col
 		}
 	}
 	return -1
 }
 
-func primeInRow(starMatrix types.SquareMatrix, row int) int {
-	for col := 0; col < starMatrix.Dim(); col++ {
-		if starMatrix.Get(row, col) == 2 {
+func primeInRow(maskMatrix types.SquareMatrix, row int) int {
+	for col := 0; col < maskMatrix.Dim(); col++ {
+		if maskMatrix.Get(row, col) == 2 {
 			return col
 		}
 	}
 	return -1
 }
 
-func isStarInCol(starMatrix types.SquareMatrix, col int) bool {
-	for row := 0; row < starMatrix.Dim(); row++ {
-		if starMatrix.Get(row, col) == 1 {
+func isStarInCol(maskMatrix types.SquareMatrix, col int) bool {
+	for row := 0; row < maskMatrix.Dim(); row++ {
+		if maskMatrix.Get(row, col) == 1 {
 			return true
 		}
 	}
 	return false
 }
 
-func starInCol(starMatrix types.SquareMatrix, col int) int {
-	for row := 0; row < starMatrix.Dim(); row++ {
-		if starMatrix.Get(row, col) == 1 {
+func starInCol(maskMatrix types.SquareMatrix, col int) int {
+	for row := 0; row < maskMatrix.Dim(); row++ {
+		if maskMatrix.Get(row, col) == 1 {
 			return row
 		}
 	}
 	return -1
 }
 
-func augmentPath(starMatrix types.SquareMatrix, paths []rowColPair) types.SquareMatrix {
-	newStarMatrix := starMatrix.Clone()
+func augmentPath(maskMatrix types.SquareMatrix, paths []rowColPair) types.SquareMatrix {
+	newmaskMatrix := maskMatrix.Clone()
 
 	for _, v := range paths {
 		val := 1
-		if starMatrix.Get(v.row, v.col) == 1 {
+		if maskMatrix.Get(v.row, v.col) == 1 {
 			val = 0
 		}
-		newStarMatrix.Set(v.row, v.col, val)
+		newmaskMatrix.Set(v.row, v.col, val)
 
 	}
 
-	return *newStarMatrix
+	return *newmaskMatrix
 
 }
 
-func erasePrimes(starMatrix types.SquareMatrix) types.SquareMatrix {
-	newStarMatrix := starMatrix.Clone()
-	for row := 0; row < starMatrix.Dim(); row++ {
-		for col := 0; col < starMatrix.Dim(); col++ {
-			if newStarMatrix.Get(row, col) == 2 {
-				newStarMatrix.Set(row, col, 0)
+func erasePrimes(maskMatrix types.SquareMatrix) types.SquareMatrix {
+	newmaskMatrix := maskMatrix.Clone()
+	for row := 0; row < maskMatrix.Dim(); row++ {
+		for col := 0; col < maskMatrix.Dim(); col++ {
+			if newmaskMatrix.Get(row, col) == 2 {
+				newmaskMatrix.Set(row, col, 0)
 			}
 		}
 	}
-	return *newStarMatrix
+	return *newmaskMatrix
 }
 
 func findSmallest(costMatrix types.SquareMatrix, rowCov rowCoverage, colCov colCoverage) int {
