@@ -7,39 +7,43 @@ import (
 	"strings"
 )
 
-type SquareMatrix[T ~int] struct {
+type SquareMatrix struct {
 	dimension int
-	elements  []T
+	elements  []int
 }
 
 // Set... row and col is zero based
-func (sm *SquareMatrix[T]) Set(row, col int, value T) {
+func (sm *SquareMatrix) Set(row, col int, value int) {
 	idx := row*sm.dimension + col
 	sm.elements[idx] = value
 }
 
+func (sm *SquareMatrix) Dim() int {
+	return sm.dimension
+}
+
 // Get... row and col is zero based
-func (sm *SquareMatrix[T]) Get(row, col int) T {
+func (sm *SquareMatrix) Get(row, col int) int {
 	idx := row*sm.dimension + col
 	return sm.elements[idx]
 }
 
-func (sm *SquareMatrix[T]) Clone() *SquareMatrix[T] {
-	elem := make([]T, sm.dimension*sm.dimension)
+func (sm *SquareMatrix) Clone() *SquareMatrix {
+	elem := make([]int, sm.dimension*sm.dimension)
 
 	copy(elem, sm.elements)
-	return &SquareMatrix[T]{
+	return &SquareMatrix{
 		dimension: sm.dimension,
 		elements:  elem,
 	}
 }
 
-func (sm *SquareMatrix[T]) String() string {
+func (sm *SquareMatrix) String() string {
 	lines := []string{}
 
-	maxNum := T(0)
+	maxNum := int(0)
 	for i := 0; i < sm.dimension*sm.dimension; i++ {
-		maxNum = T(int(math.Max(float64(maxNum), float64(sm.elements[i]))))
+		maxNum = int(int(math.Max(float64(maxNum), float64(sm.elements[i]))))
 	}
 
 	maxDigitElement := len(fmt.Sprint(maxNum))
@@ -47,7 +51,7 @@ func (sm *SquareMatrix[T]) String() string {
 
 	headers := []string{}
 	for i := 0; i < sm.dimension; i++ {
-		headers = append(headers, fmt.Sprintf("%*d", maxDigitElement, i+1))
+		headers = append(headers, fmt.Sprintf("%*d", maxDigitElement, i))
 	}
 
 	lines = append(lines, fmt.Sprintf("%*s   ", maxDigitDimension, "")+strings.Join(headers, "  "))
@@ -57,21 +61,21 @@ func (sm *SquareMatrix[T]) String() string {
 		for col := 0; col < sm.dimension; col++ {
 			entry = append(entry, fmt.Sprintf("%*d", maxDigitElement, sm.Get(row, col)))
 		}
-		lines = append(lines, fmt.Sprintf("%*d [ %s ]", maxDigitDimension, row+1, strings.Join(entry, ", ")))
+		lines = append(lines, fmt.Sprintf("%*d [ %s ]", maxDigitDimension, row, strings.Join(entry, ", ")))
 	}
 
 	return strings.Join(lines, "\n")
 }
 
-func NewSquareMatrix[T ~int](dimension int) *SquareMatrix[T] {
-	return &SquareMatrix[T]{
+func NewSquareMatrix(dimension int) *SquareMatrix {
+	return &SquareMatrix{
 		dimension: dimension,
-		elements:  make([]T, dimension*dimension),
+		elements:  make([]int, dimension*dimension),
 	}
 
 }
 
-func NewCostMatrix[T ~int](workerCount, jobCount int, costs []T) (*SquareMatrix[T], error) {
+func NewCostMatrix(workerCount, jobCount int, costs []int) (*SquareMatrix, error) {
 
 	rowNum, colNum, elements := workerCount, jobCount, costs
 
@@ -81,7 +85,7 @@ func NewCostMatrix[T ~int](workerCount, jobCount int, costs []T) (*SquareMatrix[
 
 	dimension := int(math.Max(float64(rowNum), float64(colNum)))
 
-	result := NewSquareMatrix[T](dimension)
+	result := NewSquareMatrix(dimension)
 
 	for row := 0; row < rowNum; row++ {
 		for col := 0; col < colNum; col++ {
