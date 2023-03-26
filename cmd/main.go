@@ -12,7 +12,14 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+	println("cost matrix:")
+	println(costMatrix.String(), "\n")
 
-	println(costMatrix.String())
+	result := costMatrix.Clone()
+
+	result.Set(0, 0, 99)
+
+	println("result matrix:")
+	println(result.String(), "\n")
 
 }

@@ -12,6 +12,28 @@ type SquareMatrix[T ~int] struct {
 	elements  []T
 }
 
+// Set... row and col is zero based
+func (sm *SquareMatrix[T]) Set(row, col int, value T) {
+	idx := row*sm.dimension + col
+	sm.elements[idx] = value
+}
+
+// Get... row and col is zero based
+func (sm *SquareMatrix[T]) Get(row, col int) T {
+	idx := row*sm.dimension + col
+	return sm.elements[idx]
+}
+
+func (sm *SquareMatrix[T]) Clone() *SquareMatrix[T] {
+	elem := make([]T, sm.dimension*sm.dimension)
+
+	copy(elem, sm.elements)
+	return &SquareMatrix[T]{
+		dimension: sm.dimension,
+		elements:  elem,
+	}
+}
+
 func (sm *SquareMatrix[T]) String() string {
 	lines := []string{}
 
@@ -41,7 +63,7 @@ func (sm *SquareMatrix[T]) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func NewEmptySquareMatrix[T ~int](dimension int) *SquareMatrix[T] {
+func NewSquareMatrix[T ~int](dimension int) *SquareMatrix[T] {
 	return &SquareMatrix[T]{
 		dimension: dimension,
 		elements:  make([]T, dimension*dimension),
@@ -49,40 +71,23 @@ func NewEmptySquareMatrix[T ~int](dimension int) *SquareMatrix[T] {
 
 }
 
-// Set... row and col is zero based
-func (sm *SquareMatrix[T]) Set(row, col int, value T) {
-	idx := row*sm.dimension + col
-	sm.elements[idx] = value
-}
+func NewCostMatrix[T ~int](workerCount, jobCount int, costs []T) (*SquareMatrix[T], error) {
 
-// Get... row and col is zero based
-func (sm *SquareMatrix[T]) Get(row, col int) T {
-	idx := row*sm.dimension + col
-	return sm.elements[idx]
-}
+	rowNum, colNum, elements := workerCount, jobCount, costs
 
-func NewSquareMatrix[T ~int](rowNum, colNum int, elements []T) (*SquareMatrix[T], error) {
 	if len(elements) != rowNum*colNum {
 		return nil, errors.New("len(costs) != workerCount*jobCount")
 	}
 
 	dimension := int(math.Max(float64(rowNum), float64(colNum)))
 
-	result := NewEmptySquareMatrix[T](dimension)
+	result := NewSquareMatrix[T](dimension)
 
 	for row := 0; row < rowNum; row++ {
 		for col := 0; col < colNum; col++ {
-			// index := row*dimension + col
-			// result.elements[index] = elements[row*colNum+col]
 			result.Set(row, col, elements[row*colNum+col])
 		}
 	}
 
 	return result, nil
-}
-
-func NewCostMatrix[T ~int](workerCount, jobCount int, costs []T) (*SquareMatrix[T], error) {
-
-	return NewSquareMatrix(workerCount, jobCount, costs)
-
 }
